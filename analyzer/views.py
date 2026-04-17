@@ -147,7 +147,6 @@ Be specific and accurate. Focus on technical skills, experience, and job require
                 ai_response = ai_response[:-3]
 
             result = json.loads(ai_response.strip())
-
             return {
                 'match_score': result.get('match_score', 50),
                 'matched_skills': result.get('matched_skills', []),
