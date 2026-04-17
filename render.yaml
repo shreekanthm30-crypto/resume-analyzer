@@ -2,7 +2,7 @@ services:
   - type: web
     name: resume-analyzer
     runtime: python3
-    buildCommand: "cd /opt/render/project/src && pip install -r requirements.txt && python manage.py collectstatic --noinput --settings=config.settings"
+    buildCommand: "cd /opt/render/project/src && pip install -r requirements.txt"
     startCommand: "cd /opt/render/project/src && python manage.py runserver 0.0.0.0:$PORT --settings=config.settings"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
