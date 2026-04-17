@@ -643,6 +643,13 @@
             <p>Upload your resume and job description for instant AI-powered analysis</p>
         </div>
 
+        {% if not openai_available %}
+        <div class="alert alert-warning" style="border-radius: 12px; border: 2px solid var(--warning); background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #92400e; margin-bottom: 24px; animation: scaleIn 0.6s ease-out;">
+            <i class="fas fa-exclamation-triangle" style="margin-right: 10px;"></i>
+            <strong>AI Analysis Unavailable:</strong> OpenAI API key not configured. The app will perform basic keyword matching analysis only. For full AI-powered analysis, please configure the OPENAI_API_KEY environment variable.
+        </div>
+        {% endif %}
+
         <form method="POST" enctype="multipart/form-data" id="analyzeForm">
             {% csrf_token %}
             
