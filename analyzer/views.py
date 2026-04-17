@@ -13,7 +13,14 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from io import BytesIO
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+# Initialize OpenAI client only if API key is available
+client = None
+if settings.OPENAI_API_KEY:
+    try:
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    except Exception as e:
+        print(f"Failed to initialize OpenAI client: {e}")
+        client = None
 
 def extract_text_from_pdf(file_path):
     """Extract text from PDF file"""
@@ -95,6 +102,10 @@ def parse_resume_data(text):
 
 def analyze_resume_with_ai(text, job_description):
     """Enhanced AI analysis with better prompt engineering"""
+    # Check if OpenAI client is available
+    if not client:
+        return analyze_resume_fallback(text, job_description)
+
     try:
         prompt = f"""
 Analyze this resume against the job description. Provide a detailed analysis in JSON format.
@@ -170,6 +181,60 @@ Be specific and accurate. Focus on technical skills, experience, and job require
             'weaknesses': [],
             'ai_response': str(e)
         }
+
+def analyze_resume_fallback(text, job_description):
+    """Fallback analysis when OpenAI API key is not available"""
+    # Basic keyword matching analysis
+    resume_lower = text.lower()
+    job_lower = job_description.lower()
+
+    # Common technical skills to check
+    common_skills = [
+        'python', 'java', 'javascript', 'html', 'css', 'sql', 'react', 'angular', 'vue',
+        'django', 'flask', 'spring', 'node.js', 'express', 'mongodb', 'postgresql', 'mysql',
+        'aws', 'docker', 'kubernetes', 'git', 'linux', 'agile', 'scrum', 'api', 'rest'
+    ]
+
+    matched_skills = []
+    missing_skills = []
+
+    for skill in common_skills:
+        if skill in resume_lower and skill in job_lower:
+            matched_skills.append(skill.title())
+        elif skill in job_lower and skill not in resume_lower:
+            missing_skills.append(skill.title())
+
+    # Calculate basic match score based on skill matching
+    if matched_skills:
+        match_score = min(95, 40 + (len(matched_skills) * 10))
+    else:
+        match_score = 35
+
+    # Basic suggestions
+    suggestions = "This is a basic analysis without AI. For detailed analysis, please configure OpenAI API key in environment variables."
+
+    if missing_skills:
+        suggestions += f" Consider adding these skills: {', '.join(missing_skills[:3])}."
+
+    strengths = ["Resume uploaded successfully"]
+    if matched_skills:
+        strengths.append(f"Found {len(matched_skills)} matching skills")
+
+    weaknesses = []
+    if missing_skills:
+        weaknesses.append(f"Missing {len(missing_skills)} relevant skills")
+    if len(text) < 500:
+        weaknesses.append("Resume appears to be brief")
+
+    return {
+        'match_score': match_score,
+        'matched_skills': matched_skills,
+        'missing_skills': missing_skills[:5],  # Limit to 5
+        'suggestions': suggestions,
+        'strengths': strengths,
+        'weaknesses': weaknesses,
+        'ai_response': 'Basic analysis completed (OpenAI API key not configured)'
+    }
 
 def home(request):
     if request.method == "POST":
@@ -255,7 +320,9 @@ def home(request):
                     pass
             return render(request, "home.html", {"error": f"An error occurred: {str(e)}"})
     
-    return render(request, "home.html")
+    return render(request, "home.html", {
+        'openai_available': client is not None
+    })
 
 def download_analysis(request, analysis_id):
     """Generate and download a PDF report of the analysis"""
